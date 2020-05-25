@@ -49,7 +49,7 @@ public:
 	using PtrType = FourByteScopedPtr<GrowingGlobalPoolAllocator<T, maxElements, bucketSize>>;
 	friend PtrType;
 
-	static_assert(maxElements < PtrType::NULL_PTR, "Cannot store that many pointer objects");
+	static_assert(maxElements <= PtrType::MAX_PTR, "Cannot store that many pointer objects");
 	static_assert(maxElements > 0, "maxElements cannot be zero");
 	static_assert(bucketSize > 0, "bucketSize cannot be zero");
 	static_assert(maxElements >= bucketSize,

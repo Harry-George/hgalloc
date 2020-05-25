@@ -73,8 +73,6 @@ auto GrowingGlobalPoolAllocator<T, ms, bs>::GetMemoryOrAlloc(FourBytePtr ptr) ->
 
 	if (buffers[bucketNum].empty()) { buffers[bucketNum].resize(bs); }
 
-	//	return GetMemory(ptr);
-
 	const auto index(ptr & BUCKET_MASK);
 	HGALLOC_ASSERT(buffers[bucketNum].size() > index);
 
