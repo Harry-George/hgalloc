@@ -25,6 +25,17 @@
 
 namespace hgalloc {
 
+template <std::size_t n> 
+constexpr auto CountSetBits() -> std::size_t {
+	std::size_t count = 0;
+	std::size_t number(n);
+	while (number) {
+		number &= (number - 1);
+		count++;
+	}
+	return count;
+}
+
 template<
 		// The type to store
 		typename T,
@@ -43,14 +54,7 @@ public:
 	static_assert(bucketSize > 0, "bucketSize cannot be zero");
 	static_assert(maxElements >= bucketSize,
 				  "maxElements must be greater than or equal to bucket size");
-
-	//	// TODO - this properly so bucket size can be > 128
-	//	static_assert(bucketSize == 0b00000001 || bucketSize == 0b00000010 ||
-	//						  bucketSize == 0b00000100 || bucketSize == 0b00001000 ||
-	//						  bucketSize == 0b00010000 || bucketSize == 0b00100000 ||
-	//						  bucketSize == 0b01000000 || bucketSize == 0b10000000,
-	//				  "Bucket Size must be a power of 2");
-
+	static_assert(CountSetBits<bucketSize>() == 1, "Bucket size must be a power of 2");
 
 	// not-movable
 	GrowingGlobalPoolAllocator(GrowingGlobalPoolAllocator &&) = delete;
