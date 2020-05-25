@@ -2,7 +2,7 @@
  *
  * GrowingGlobalPoolAllocator_impl.h
  * 
- * 		Implementation of 
+ * 		Implementation of GrowingGlobalPoolAllocator
  *
  *--------------------------------------------------------------------------------------------------
  */

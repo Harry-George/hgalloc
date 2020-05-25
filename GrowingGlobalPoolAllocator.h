@@ -1,7 +1,14 @@
 /*--------------------------------------------------------------------------------------------------
  *
  * GrowingGlobalPoolAllocator.h
- *		Allocator for storing lots of a certain type of object. 
+ *		This is a pool allocator that can both grow and shrink. 
+ *		
+ *		It works by having a series of buckets. Each a contiguous block of <bucketSize> elements. If we need
+ *		more memory we create a new bucket. Each bucket has its own free list and we prefer to pick elements
+ *		from the lowest free list, so if you start using less elements eventually the higher buckets will
+ *		become empty. When this happens they are deleted freeing up the memory.
+ *		
+ *		It returns 4 byte pointers, which behave just like a unique_ptr but are only 4 bytes large. 
  *
  *--------------------------------------------------------------------------------------------------
  */
@@ -37,12 +44,12 @@ public:
 	static_assert(maxElements >= bucketSize,
 				  "maxElements must be greater than or equal to bucket size");
 
-//	// TODO - this properly so bucket size can be > 128
-//	static_assert(bucketSize == 0b00000001 || bucketSize == 0b00000010 ||
-//						  bucketSize == 0b00000100 || bucketSize == 0b00001000 ||
-//						  bucketSize == 0b00010000 || bucketSize == 0b00100000 ||
-//						  bucketSize == 0b01000000 || bucketSize == 0b10000000,
-//				  "Bucket Size must be a power of 2");
+	//	// TODO - this properly so bucket size can be > 128
+	//	static_assert(bucketSize == 0b00000001 || bucketSize == 0b00000010 ||
+	//						  bucketSize == 0b00000100 || bucketSize == 0b00001000 ||
+	//						  bucketSize == 0b00010000 || bucketSize == 0b00100000 ||
+	//						  bucketSize == 0b01000000 || bucketSize == 0b10000000,
+	//				  "Bucket Size must be a power of 2");
 
 
 	// not-movable
