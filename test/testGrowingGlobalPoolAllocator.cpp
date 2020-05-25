@@ -18,7 +18,7 @@
 namespace hgalloc {
 
 struct IntAllocator : ::testing::Test {
-	GrowingGlobalPoolAllocator<std::uint64_t, 10, 8> allocator{};
+	GrowingGlobalPoolAllocator<std::uint64_t, 8> allocator{10};
 };
 
 TEST_F(IntAllocator, Works)
@@ -140,8 +140,8 @@ TEST_F(IntAllocator, CreatingMoreThanMaxSize_ReturnsNullptr)
 }
 
 struct LargeIntAllocator : ::testing::Test {
-	using Allocator = GrowingGlobalPoolAllocator<std::uint64_t, 200, 8>;
-	Allocator allocator{};
+	using Allocator = GrowingGlobalPoolAllocator<std::uint64_t, 8>;
+	Allocator allocator{200};
 };
 
 TEST_F(LargeIntAllocator, ReturnsCorrectValues)
@@ -203,7 +203,7 @@ struct CtorDtorCountedFixture : ::testing::Test {
 		dtorsCalled = 0;
 	}
 
-	GrowingGlobalPoolAllocator<CtorDtorCounted, 10, 8> allocator{};
+	GrowingGlobalPoolAllocator<CtorDtorCounted, 8> allocator{10};
 };
 
 TEST_F(CtorDtorCountedFixture, OnStartupDoesntCallCtor) { ASSERT_EQ(0, ctorsCalled); }
@@ -246,7 +246,7 @@ struct NonDefaultConstructable {
 };
 
 struct NonDefaultConstructableFixture : ::testing::Test {
-	GrowingGlobalPoolAllocator<NonDefaultConstructable, 10, 8> allocator{};
+	GrowingGlobalPoolAllocator<NonDefaultConstructable, 8> allocator{10};
 };
 
 TEST_F(NonDefaultConstructableFixture, CanBeConst)
@@ -327,8 +327,8 @@ TEST(MemTest, InProgress)
 	auto startingMem(CurrentMem());
 	auto printCurMem([&]() { std::cout << CurrentMem() - startingMem << std::endl; });
 	{
-		using Allocator = GrowingGlobalPoolAllocator<std::array<char, 10'000>, 100'000, 16'384>;
-		Allocator allocator{};
+		using Allocator = GrowingGlobalPoolAllocator<std::array<char, 10'000>, 16'384>;
+		Allocator allocator{100'000};
 		std::vector<Allocator::PtrType> ptrs;
 
 		printCurMem();

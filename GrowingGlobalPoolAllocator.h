@@ -25,8 +25,9 @@
 
 namespace hgalloc {
 
-template <std::size_t n> 
-constexpr auto CountSetBits() -> std::size_t {
+template<std::size_t n>
+constexpr auto CountSetBits() -> std::size_t
+{
 	std::size_t count = 0;
 	std::size_t number(n);
 	while (number) {
@@ -39,21 +40,16 @@ constexpr auto CountSetBits() -> std::size_t {
 template<
 		// The type to store
 		typename T,
-		// the max number of elements for the global allocator to store. So for max size its
-		// sizeof(T) * maxElements
-		std::size_t maxElements,
 		std::size_t bucketSize>// the size of each bucket. Must be a power of 2
 class GrowingGlobalPoolAllocator {
 public:
 	using Type = T;
-	using PtrType = FourByteScopedPtr<GrowingGlobalPoolAllocator<T, maxElements, bucketSize>>;
+	using PtrType = FourByteScopedPtr<GrowingGlobalPoolAllocator<T, bucketSize>>;
 	friend PtrType;
 
-	static_assert(maxElements <= PtrType::MAX_PTR, "Cannot store that many pointer objects");
-	static_assert(maxElements > 0, "maxElements cannot be zero");
+
 	static_assert(bucketSize > 0, "bucketSize cannot be zero");
-	static_assert(maxElements >= bucketSize,
-				  "maxElements must be greater than or equal to bucket size");
+
 	static_assert(CountSetBits<bucketSize>() == 1, "Bucket size must be a power of 2");
 
 	// not-movable
@@ -63,7 +59,9 @@ public:
 	GrowingGlobalPoolAllocator(const GrowingGlobalPoolAllocator &) = delete;
 	GrowingGlobalPoolAllocator &operator=(const GrowingGlobalPoolAllocator &) = delete;
 
-	explicit GrowingGlobalPoolAllocator();
+	// the max number of elements for the global allocator to store. So for max size its
+	// sizeof(T) * maxElements
+	explicit GrowingGlobalPoolAllocator(std::size_t maxElements);
 	~GrowingGlobalPoolAllocator();
 
 	// Returns a unique ptr like object that will free its memory when it exits scope
@@ -71,7 +69,7 @@ public:
 	auto Allocate(Args &&...) -> PtrType;
 
 	[[nodiscard]] auto Size() const -> std::size_t;
-	[[nodiscard]] constexpr auto Capacity() const -> std::size_t { return maxElements; }
+	[[nodiscard]] auto Capacity() const -> std::size_t;
 
 private:
 	static auto Free(FourBytePtr, T *) -> void;
@@ -85,8 +83,6 @@ private:
 	static_assert(sizeof(T) >= sizeof(FourBytePtr),
 				  "We need the size of the object to be at least 4 bytes");
 
-	constexpr static std::size_t NUM_OF_BUCKETS{(maxElements / bucketSize) +
-												(maxElements % bucketSize == 0 ? 0 : 1)};
 	constexpr static std::size_t BUCKET_MASK{bucketSize - 1};
 
 	struct FreeList {
@@ -97,20 +93,22 @@ private:
 	};
 
 	struct GlobalState {
-		std::vector<std::vector<MemBlock>> buffers_{NUM_OF_BUCKETS};
+		std::vector<std::vector<MemBlock>> buffers_;
 		// We create a linked list of free memory, this means we don't need any extra memory
 		// for our free list and freeing can't throw.
-		std::vector<FreeList> freeLists_{NUM_OF_BUCKETS, FreeList{}};
+		std::vector<FreeList> freeLists_;
 		// We store an extra bit of information here to stop us having to read
 		// all the free list sizes each allocation
 		std::size_t totalFreeListSize_{0};
+		std::size_t maxNumOfElements_{0};
 		std::size_t numOfElements_{0};
 		std::size_t smallestBucket_{0};
 	};
 
 	// Accessors to static internal state. Makes the lifetime much easier to manage.
 
-	static inline struct GlobalState globalState_{};
+	static inline struct GlobalState globalState_{
+	};
 
 	// Convenience accessors to global state members
 	struct BlockAndPtr {

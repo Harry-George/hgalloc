@@ -15,22 +15,22 @@ Latest perf results
 ---------------------------------------------------------------------------------------
 Benchmark                                             Time             CPU   Iterations
 ---------------------------------------------------------------------------------------
-UniquePtrBM                                     7539638 ns      7528305 ns           90
-GrowingGlobalPoolAllocatorBM                    2815209 ns      2813695 ns          246
-UniquePtrRoundRobinBM                            437341 ns       437108 ns         1615
-GrowingGlobalPoolAllocatorRoundRobinBM           429709 ns       429453 ns         1640
-UniquePtrLastRecordBM                            325558 ns       325519 ns         2135
-GrowingGlobalPoolAllocatorLastRecordBM           216644 ns       216607 ns         3242
-UniquePtrRandomReplaceBM                          69706 ns        69743 ns         9978
-GrowingGlobalPoolAllocatorRandomReplaceBM         51434 ns        51472 ns        13275
-UniquePtrSequentialAccessBM                      185288 ns       185265 ns         3797
-GrowingGlobalPoolAllocatorSequentialAccessBM      62620 ns        62611 ns        11151
-UniquePtrRandomAccessBM                          995677 ns       995532 ns          714
-GrowingGlobalPoolAllocatorRandomAccessBM        1025848 ns      1025723 ns          686
-UniquePtrFreeSequentialBM                        616204 ns       616052 ns         1186
-GrowingGlobalPoolAllocatorFreeSequentialBM       292139 ns       292092 ns         2397
-UniquePtrFreeReverseBM                           611691 ns       611611 ns         1150
-GrowingGlobalPoolAllocatorFreeReverseBM          317626 ns       317580 ns         2220
+UniquePtrBM                                     8289114 ns      8282727 ns           86
+GrowingGlobalPoolAllocatorBM                    3014760 ns      3013735 ns          199
+UniquePtrRoundRobinBM                            421130 ns       421004 ns         1666
+GrowingGlobalPoolAllocatorRoundRobinBM           453376 ns       453232 ns         1560
+UniquePtrLastRecordBM                            337667 ns       337611 ns         2041
+GrowingGlobalPoolAllocatorLastRecordBM           233814 ns       233774 ns         2978
+UniquePtrRandomReplaceBM                          72292 ns        72327 ns         9446
+GrowingGlobalPoolAllocatorRandomReplaceBM         54016 ns        54041 ns        12738
+UniquePtrSequentialAccessBM                      194596 ns       194558 ns         3615
+GrowingGlobalPoolAllocatorSequentialAccessBM      64589 ns        64579 ns        10842
+UniquePtrRandomAccessBM                         1026623 ns      1026462 ns          682
+GrowingGlobalPoolAllocatorRandomAccessBM        1069540 ns      1069298 ns          652
+UniquePtrFreeSequentialBM                        611618 ns       611522 ns         1144
+GrowingGlobalPoolAllocatorFreeSequentialBM       408857 ns       408785 ns         1713
+UniquePtrFreeReverseBM                           631077 ns       630986 ns         1123
+GrowingGlobalPoolAllocatorFreeReverseBM          327638 ns       327574 ns         2139
 
 
 ```

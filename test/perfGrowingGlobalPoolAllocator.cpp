@@ -36,8 +36,8 @@ BENCHMARK(UniquePtrBM);
 
 void GrowingGlobalPoolAllocatorBM(benchmark::State &state)
 {
-	using Allocator = GrowingGlobalPoolAllocator<BigType, 100'000, 16'384>;
-	Allocator allocator{};
+	using Allocator = GrowingGlobalPoolAllocator<BigType, 16'384>;
+	Allocator allocator{100'000};
 	std::vector<Allocator::PtrType> ret;
 	ret.reserve(runSize);
 
@@ -66,8 +66,8 @@ BENCHMARK(UniquePtrRoundRobinBM);
 
 void GrowingGlobalPoolAllocatorRoundRobinBM(benchmark::State &state)
 {
-	using Allocator = GrowingGlobalPoolAllocator<BigType, 100'000, 16'384>;
-	Allocator allocator{};
+	using Allocator = GrowingGlobalPoolAllocator<BigType, 16'384>;
+	Allocator allocator{100'000};
 	std::vector<Allocator::PtrType> ret;
 	ret.reserve(runSize);
 	auto perRun(runSize / 10);
@@ -103,8 +103,8 @@ BENCHMARK(UniquePtrLastRecordBM);
 
 void GrowingGlobalPoolAllocatorLastRecordBM(benchmark::State &state)
 {
-	using Allocator = GrowingGlobalPoolAllocator<BigType, 100'000, 16'384>;
-	Allocator allocator{};
+	using Allocator = GrowingGlobalPoolAllocator<BigType, 16'384>;
+	Allocator allocator{100'000};
 	std::vector<Allocator::PtrType> ret;
 	ret.reserve(runSize);
 	auto perRun(runSize / 10);
@@ -149,8 +149,8 @@ BENCHMARK(UniquePtrRandomReplaceBM);
 
 void GrowingGlobalPoolAllocatorRandomReplaceBM(benchmark::State &state)
 {
-	using Allocator = GrowingGlobalPoolAllocator<BigType, 100'000, 16'384>;
-	Allocator allocator{};
+	using Allocator = GrowingGlobalPoolAllocator<BigType, 16'384>;
+	Allocator allocator{100'000};
 	std::vector<Allocator::PtrType> ret;
 	ret.reserve(runSize);
 
@@ -189,8 +189,8 @@ BENCHMARK(UniquePtrSequentialAccessBM);
 
 void GrowingGlobalPoolAllocatorSequentialAccessBM(benchmark::State &state)
 {
-	using Allocator = GrowingGlobalPoolAllocator<int, 100'000, 16'384>;
-	Allocator allocator{};
+	using Allocator = GrowingGlobalPoolAllocator<int, 16'384>;
+	Allocator allocator{100'000};
 	std::vector<Allocator::PtrType> ret;
 	ret.reserve(runSize);
 
@@ -223,8 +223,8 @@ BENCHMARK(UniquePtrRandomAccessBM);
 
 void GrowingGlobalPoolAllocatorRandomAccessBM(benchmark::State &state)
 {
-	using Allocator = GrowingGlobalPoolAllocator<int, 100'000, 16'384>;
-	Allocator allocator{};
+	using Allocator = GrowingGlobalPoolAllocator<int, 16'384>;
+	Allocator allocator{100'000};
 	std::vector<Allocator::PtrType> ret;
 	ret.reserve(runSize);
 
@@ -260,8 +260,8 @@ BENCHMARK(UniquePtrFreeSequentialBM);
 
 void GrowingGlobalPoolAllocatorFreeSequentialBM(benchmark::State &state)
 {
-	using Allocator = GrowingGlobalPoolAllocator<int, 100'000, 16'384>;
-	Allocator allocator{};
+	using Allocator = GrowingGlobalPoolAllocator<int, 16'384>;
+	Allocator allocator{100'000};
 	std::vector<Allocator::PtrType> ret;
 	ret.reserve(runSize);
 
@@ -296,8 +296,8 @@ BENCHMARK(UniquePtrFreeReverseBM);
 
 void GrowingGlobalPoolAllocatorFreeReverseBM(benchmark::State &state)
 {
-	using Allocator = GrowingGlobalPoolAllocator<int, 100'000, 16'384>;
-	Allocator allocator{};
+	using Allocator = GrowingGlobalPoolAllocator<int, 16'384>;
+	Allocator allocator{100'000};
 	std::vector<Allocator::PtrType> ret;
 	ret.reserve(runSize);
 

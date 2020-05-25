@@ -23,14 +23,30 @@
 
 namespace hgalloc {
 
-template<typename T, std::size_t ms, std::size_t bs>
-GrowingGlobalPoolAllocator<T, ms, bs>::GrowingGlobalPoolAllocator()
+template<typename T, std::size_t bs>
+GrowingGlobalPoolAllocator<T, bs>::GrowingGlobalPoolAllocator(std::size_t maxElements)
 {
-	HGALLOC_ASSERT(globalState_.buffers_[0].empty());
+	// TODO - bad size error handling
+	//	static_assert(maxElements >= bucketSize,
+	//				  "maxElements must be greater than or equal to bucket size");
+	//	static_assert(maxElements <= PtrType::MAX_PTR, "Cannot store that many pointer objects");
+	//	static_assert(maxElements > 0, "maxElements cannot be zero");
+	HGALLOC_ASSERT(globalState_.buffers_.empty());
+
+	// Reset the global state
+	globalState_ = GlobalState{};
+
+
+	const auto numOfBuckets((maxElements / bs) + (maxElements % bs == 0 ? 0 : 1));
+
+	// Resize the buffers
+	globalState_.maxNumOfElements_ = maxElements;
+	globalState_.buffers_.resize(numOfBuckets);
+	globalState_.freeLists_.resize(numOfBuckets);
 }
 
-template<typename T, std::size_t ms, std::size_t bs>
-GrowingGlobalPoolAllocator<T, ms, bs>::~GrowingGlobalPoolAllocator()
+template<typename T, std::size_t bs>
+GrowingGlobalPoolAllocator<T, bs>::~GrowingGlobalPoolAllocator()
 {
 	if (Size() > 0) {
 		std::cerr << "Pool allocator of type " << typeid(T).name() << " went out of scope with "
@@ -55,8 +71,8 @@ constexpr auto MostSignificantBitLocation() -> std::size_t
 	return location;
 }
 
-template<typename T, std::size_t ms, std::size_t bs>
-auto GrowingGlobalPoolAllocator<T, ms, bs>::GetMemory(FourBytePtr ptr) -> MemBlock &
+template<typename T, std::size_t bs>
+auto GrowingGlobalPoolAllocator<T, bs>::GetMemory(FourBytePtr ptr) -> MemBlock &
 {
 	const std::size_t bucketNum(ptr >> MostSignificantBitLocation<BUCKET_MASK>());
 	const std::size_t index(ptr & BUCKET_MASK);
@@ -64,8 +80,8 @@ auto GrowingGlobalPoolAllocator<T, ms, bs>::GetMemory(FourBytePtr ptr) -> MemBlo
 	return globalState_.buffers_[bucketNum][index];
 }
 
-template<typename T, std::size_t ms, std::size_t bs>
-auto GrowingGlobalPoolAllocator<T, ms, bs>::GetMemoryOrAlloc(FourBytePtr ptr) -> MemBlock &
+template<typename T, std::size_t bs>
+auto GrowingGlobalPoolAllocator<T, bs>::GetMemoryOrAlloc(FourBytePtr ptr) -> MemBlock &
 {
 	const std::size_t bucketNum(ptr >> MostSignificantBitLocation<BUCKET_MASK>());
 
@@ -79,9 +95,9 @@ auto GrowingGlobalPoolAllocator<T, ms, bs>::GetMemoryOrAlloc(FourBytePtr ptr) ->
 	return buffers[bucketNum][index];
 }
 
-template<typename T, std::size_t ms, std::size_t bs>
+template<typename T, std::size_t bs>
 template<typename... Args>
-auto GrowingGlobalPoolAllocator<T, ms, bs>::Allocate(Args &&... args) -> PtrType
+auto GrowingGlobalPoolAllocator<T, bs>::Allocate(Args &&... args) -> PtrType
 {
 	if (globalState_.totalFreeListSize_ > 0) {
 		// First we check to see if we have any previously freed elements and will use them first
@@ -93,7 +109,7 @@ auto GrowingGlobalPoolAllocator<T, ms, bs>::Allocate(Args &&... args) -> PtrType
 	// Failing that, find the index into the next element in the vector
 	const std::uint32_t nextIndex(globalState_.numOfElements_);
 
-	if (nextIndex < ms) {
+	if (nextIndex < globalState_.maxNumOfElements_) {
 		// We have space, so add element in vector and return that.
 		++globalState_.numOfElements_;
 		new (&GetMemoryOrAlloc(nextIndex)) T(std::forward<Args>(args)...);// emplace onto our buffer
@@ -103,8 +119,8 @@ auto GrowingGlobalPoolAllocator<T, ms, bs>::Allocate(Args &&... args) -> PtrType
 	return PtrType::CreateNullPtr();
 }
 
-template<typename T, std::size_t ms, std::size_t bs>
-auto GrowingGlobalPoolAllocator<T, ms, bs>::Free(FourBytePtr ptr, T *value) -> void
+template<typename T, std::size_t bs>
+auto GrowingGlobalPoolAllocator<T, bs>::Free(FourBytePtr ptr, T *value) -> void
 {
 	if (value == nullptr) { return; }
 
@@ -125,7 +141,9 @@ auto GrowingGlobalPoolAllocator<T, ms, bs>::Free(FourBytePtr ptr, T *value) -> v
 			const std::size_t highestInsertedPointer(globalState_.numOfElements_ - 1);
 			const std::size_t highestBucket(highestInsertedPointer >>
 											MostSignificantBitLocation<BUCKET_MASK>());
-			HGALLOC_ASSERT(highestBucket < NUM_OF_BUCKETS);
+			HGALLOC_ASSERT(highestBucket <
+						   (globalState_.maxNumOfElements_ / bs) +
+								   (globalState_.maxNumOfElements_ % bs == 0 ? 0 : 1));
 
 
 			const std::size_t highestIndexInBucket(highestInsertedPointer & BUCKET_MASK);
@@ -146,14 +164,20 @@ auto GrowingGlobalPoolAllocator<T, ms, bs>::Free(FourBytePtr ptr, T *value) -> v
 	}
 }
 
-template<typename T, std::size_t ms, std::size_t bs>
-auto GrowingGlobalPoolAllocator<T, ms, bs>::Size() const -> std::size_t
+template<typename T, std::size_t bs>
+auto GrowingGlobalPoolAllocator<T, bs>::Size() const -> std::size_t
 {
 	return globalState_.numOfElements_ - globalState_.totalFreeListSize_;
 }
 
-template<typename T, std::size_t ms, std::size_t bs>
-auto GrowingGlobalPoolAllocator<T, ms, bs>::PopFreeList() -> BlockAndPtr
+template<typename T, std::size_t bs>
+auto GrowingGlobalPoolAllocator<T, bs>::Capacity() const -> std::size_t
+{
+	return globalState_.maxNumOfElements_;
+}
+
+template<typename T, std::size_t bs>
+auto GrowingGlobalPoolAllocator<T, bs>::PopFreeList() -> BlockAndPtr
 {
 	auto &freeLists(globalState_.freeLists_);
 	for (std::size_t i(globalState_.smallestBucket_); i < globalState_.buffers_.size(); ++i) {
@@ -177,12 +201,13 @@ auto GrowingGlobalPoolAllocator<T, ms, bs>::PopFreeList() -> BlockAndPtr
 	assert(false);
 }
 
-template<typename T, std::size_t ms, std::size_t bs>
-auto GrowingGlobalPoolAllocator<T, ms, bs>::PushFreeList(FourBytePtr ptr) -> void
+template<typename T, std::size_t bs>
+auto GrowingGlobalPoolAllocator<T, bs>::PushFreeList(FourBytePtr ptr) -> void
 {
 	HGALLOC_ASSERT(ptr != PtrType::NULL_PTR);
 	const std::size_t bucketNum(ptr >> MostSignificantBitLocation<BUCKET_MASK>());
-	HGALLOC_ASSERT(bucketNum < NUM_OF_BUCKETS);
+	HGALLOC_ASSERT(bucketNum < (globalState_.maxNumOfElements_ / bs) +
+									   (globalState_.maxNumOfElements_ % bs == 0 ? 0 : 1));
 
 	auto &freeList(globalState_.freeLists_[bucketNum]);
 
