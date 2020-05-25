@@ -111,6 +111,8 @@ private:
 	// Accessors to static internal state. Makes the lifetime much easier to manage.
 	static auto GetGlobalState() -> GlobalState &;
 
+	static inline struct GlobalState globalState_{};
+
 	// Convenience accessors to global state members
 	static auto Buffers() -> std::array<std::vector<MemBlock>, NUM_OF_BUCKETS> &;
 	struct BlockAndPtr {

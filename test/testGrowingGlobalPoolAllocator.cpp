@@ -327,13 +327,13 @@ TEST(MemTest, InProgress)
 	auto startingMem(CurrentMem());
 	auto printCurMem([&]() { std::cout << CurrentMem() - startingMem << std::endl; });
 	{
-		using Allocator = GrowingGlobalPoolAllocator<std::array<char, 100'000>, 100'000, 16'384>;
+		using Allocator = GrowingGlobalPoolAllocator<std::array<char, 10'000>, 100'000, 16'384>;
 		Allocator allocator{};
 		std::vector<Allocator::PtrType> ptrs;
 
 		printCurMem();
 
-		for (std::size_t loop(0); loop < 10; ++loop) {
+		for (std::size_t loop(0); loop < 2; ++loop) {
 
 			for (std::size_t i(0); i < 100'000; ++i) {
 				ptrs.push_back(allocator.Allocate());

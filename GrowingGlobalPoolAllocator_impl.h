@@ -219,9 +219,7 @@ auto GrowingGlobalPoolAllocator<T, ms, bs>::NumOfElements() -> std::size_t &
 template<typename T, std::size_t ms, std::size_t bs>
 auto GrowingGlobalPoolAllocator<T, ms, bs>::GetGlobalState() -> struct GlobalState &
 {
-	static struct GlobalState globalState {
-	};
-	return globalState;
+	return globalState_;
 }
 
 }// namespace hgalloc
