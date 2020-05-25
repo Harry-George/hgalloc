@@ -156,7 +156,7 @@ template<typename T, std::size_t ms, std::size_t bs>
 auto GrowingGlobalPoolAllocator<T, ms, bs>::PopFreeList() -> BlockAndPtr
 {
 	auto &freeLists(globalState_.freeLists_);
-	for (std::size_t i(globalState_.smallestBucket_); i < NUM_OF_BUCKETS; ++i) {
+	for (std::size_t i(globalState_.smallestBucket_); i < globalState_.buffers_.size(); ++i) {
 		auto &freeList(freeLists[i]);
 		if (freeList.freeList_ != PtrType::NULL_PTR) {
 			HGALLOC_ASSERT(freeList.freeListSize_ > 0);

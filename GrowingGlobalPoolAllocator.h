@@ -97,10 +97,10 @@ private:
 	};
 
 	struct GlobalState {
-		std::array<std::vector<MemBlock>, NUM_OF_BUCKETS> buffers_{{}};
+		std::vector<std::vector<MemBlock>> buffers_{NUM_OF_BUCKETS};
 		// We create a linked list of free memory, this means we don't need any extra memory
 		// for our free list and freeing can't throw.
-		std::array<FreeList, NUM_OF_BUCKETS> freeLists_{{}};
+		std::vector<FreeList> freeLists_{NUM_OF_BUCKETS, FreeList{}};
 		// We store an extra bit of information here to stop us having to read
 		// all the free list sizes each allocation
 		std::size_t totalFreeListSize_{0};
