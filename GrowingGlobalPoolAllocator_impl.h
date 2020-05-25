@@ -73,7 +73,7 @@ auto GrowingGlobalPoolAllocator<T, ms, bs>::GetMemoryOrAlloc(FourBytePtr ptr) ->
 
 	if (buffers[bucketNum].empty()) { buffers[bucketNum].resize(bs); }
 
-//	return GetMemory(ptr);
+	//	return GetMemory(ptr);
 
 	const auto index(ptr & BUCKET_MASK);
 	HGALLOC_ASSERT(buffers[bucketNum].size() > index);
@@ -118,27 +118,32 @@ auto GrowingGlobalPoolAllocator<T, ms, bs>::Free(FourBytePtr ptr, T *value) -> v
 	// We don't want to close the second we cross over a threshold
 	constexpr std::size_t numOfFreeElementsBeforeEviction(bs + (bs / 2));
 
-	// TODO - we don't need to do this every eviction.
-	if (FreeListSize() > numOfFreeElementsBeforeEviction) {
-		const std::size_t highestInsertedPointer(NumOfElements() - 1);
-		const std::size_t highestBucket(highestInsertedPointer >>
-										MostSignificantBitLocation<BUCKET_MASK>());
-		HGALLOC_ASSERT(highestBucket < NUM_OF_BUCKETS);
+	static std::size_t freeCount(0);
+	freeCount++;
+	if (freeCount == bs) {
+		freeCount = 0;
+
+		if (FreeListSize() > numOfFreeElementsBeforeEviction) {
+			const std::size_t highestInsertedPointer(NumOfElements() - 1);
+			const std::size_t highestBucket(highestInsertedPointer >>
+											MostSignificantBitLocation<BUCKET_MASK>());
+			HGALLOC_ASSERT(highestBucket < NUM_OF_BUCKETS);
 
 
-		const std::size_t highestIndexInBucket(highestInsertedPointer & BUCKET_MASK);
-		const std::size_t bucketSize(highestIndexInBucket + 1);
+			const std::size_t highestIndexInBucket(highestInsertedPointer & BUCKET_MASK);
+			const std::size_t bucketSize(highestIndexInBucket + 1);
 
-		auto &freeList(GetGlobalState().freeLists_[highestBucket]);
-		if (freeList.freeListSize_ == bucketSize) {
-			// we can evict an entire frame
-			freeList.freeListSize_ = 0;
-			freeList.freeList_ = PtrType::NULL_PTR;
-			FreeListSize() -= bucketSize;
-			NumOfElements() -= bucketSize;
-			// From http://www.cplusplus.com/reference/vector/vector/clear/ as a way to force
-			// reallocation
-			std::vector<MemBlock>().swap(Buffers()[highestBucket]);
+			auto &freeList(GetGlobalState().freeLists_[highestBucket]);
+			if (freeList.freeListSize_ == bucketSize) {
+				// we can evict an entire frame
+				freeList.freeListSize_ = 0;
+				freeList.freeList_ = PtrType::NULL_PTR;
+				FreeListSize() -= bucketSize;
+				NumOfElements() -= bucketSize;
+				// From http://www.cplusplus.com/reference/vector/vector/clear/ as a way to force
+				// reallocation
+				std::vector<MemBlock>().swap(Buffers()[highestBucket]);
+			}
 		}
 	}
 }

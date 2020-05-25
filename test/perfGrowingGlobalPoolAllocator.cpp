@@ -242,6 +242,78 @@ void GrowingGlobalPoolAllocatorRandomAccessBM(benchmark::State &state)
 }
 BENCHMARK(GrowingGlobalPoolAllocatorRandomAccessBM);
 
+void UniquePtrFreeSequentialBM(benchmark::State &state)
+{
+	std::vector<std::unique_ptr<int>> ret;
+	ret.reserve(runSize);
+
+	for (auto _ : state) {
+		state.PauseTiming();
+		ret.clear();
+		for (std::size_t i(0); i < runSize; ++i) { ret.push_back(std::make_unique<int>(i)); }
+		state.ResumeTiming();
+
+		for (auto &var : ret) { var.reset(); }
+	}
+}
+BENCHMARK(UniquePtrFreeSequentialBM);
+
+void GrowingGlobalPoolAllocatorFreeSequentialBM(benchmark::State &state)
+{
+	using Allocator = GrowingGlobalPoolAllocator<int, 100'000, 16'384>;
+	Allocator allocator{};
+	std::vector<Allocator::PtrType> ret;
+	ret.reserve(runSize);
+
+	for (auto _ : state) {
+		state.PauseTiming();
+		ret.clear();
+		for (std::size_t i(0); i < runSize; ++i) { ret.push_back(allocator.Allocate(i)); }
+		state.ResumeTiming();
+
+		for (auto &var : ret) { var.reset(); }
+	}
+}
+BENCHMARK(GrowingGlobalPoolAllocatorFreeSequentialBM);
+
+void UniquePtrFreeReverseBM(benchmark::State &state)
+{
+	std::vector<std::unique_ptr<int>> ret;
+	ret.reserve(runSize);
+
+	for (auto _ : state) {
+		state.PauseTiming();
+		ret.clear();
+		for (std::size_t i(0); i < runSize; ++i) { ret.push_back(std::make_unique<int>(i)); }
+		state.ResumeTiming();
+
+		for (std::size_t i(0); i < runSize; ++i) {
+			ret.pop_back();
+		}
+	}
+}
+BENCHMARK(UniquePtrFreeReverseBM);
+
+void GrowingGlobalPoolAllocatorFreeReverseBM(benchmark::State &state)
+{
+	using Allocator = GrowingGlobalPoolAllocator<int, 100'000, 16'384>;
+	Allocator allocator{};
+	std::vector<Allocator::PtrType> ret;
+	ret.reserve(runSize);
+
+	for (auto _ : state) {
+		state.PauseTiming();
+		ret.clear();
+		for (std::size_t i(0); i < runSize; ++i) { ret.push_back(allocator.Allocate(i)); }
+		state.ResumeTiming();
+
+		for (std::size_t i(0); i < runSize; ++i) {
+			ret.pop_back();
+		}
+	}
+}
+BENCHMARK(GrowingGlobalPoolAllocatorFreeReverseBM);
+
 }// namespace hgalloc
 
 BENCHMARK_MAIN();
