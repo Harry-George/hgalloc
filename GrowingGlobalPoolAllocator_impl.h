@@ -26,7 +26,7 @@ namespace hgalloc {
 template<typename T, std::size_t ms, std::size_t bs>
 GrowingGlobalPoolAllocator<T, ms, bs>::GrowingGlobalPoolAllocator()
 {
-	HGALLOC_ASSERT(Buffers()[0].empty());
+	HGALLOC_ASSERT(globalState_.buffers_[0].empty());
 }
 
 template<typename T, std::size_t ms, std::size_t bs>
@@ -39,7 +39,7 @@ GrowingGlobalPoolAllocator<T, ms, bs>::~GrowingGlobalPoolAllocator()
 	}
 
 	// Reset the global state
-	GetGlobalState() = GlobalState{};
+	globalState_ = GlobalState{};
 }
 
 template<std::size_t number>
@@ -61,7 +61,7 @@ auto GrowingGlobalPoolAllocator<T, ms, bs>::GetMemory(FourBytePtr ptr) -> MemBlo
 	const std::size_t bucketNum(ptr >> MostSignificantBitLocation<BUCKET_MASK>());
 	const std::size_t index(ptr & BUCKET_MASK);
 
-	return Buffers()[bucketNum][index];
+	return globalState_.buffers_[bucketNum][index];
 }
 
 template<typename T, std::size_t ms, std::size_t bs>
@@ -69,7 +69,7 @@ auto GrowingGlobalPoolAllocator<T, ms, bs>::GetMemoryOrAlloc(FourBytePtr ptr) ->
 {
 	const std::size_t bucketNum(ptr >> MostSignificantBitLocation<BUCKET_MASK>());
 
-	auto &buffers(Buffers());
+	auto &buffers(globalState_.buffers_);
 
 	if (buffers[bucketNum].empty()) { buffers[bucketNum].resize(bs); }
 
@@ -85,7 +85,7 @@ template<typename T, std::size_t ms, std::size_t bs>
 template<typename... Args>
 auto GrowingGlobalPoolAllocator<T, ms, bs>::Allocate(Args &&... args) -> PtrType
 {
-	if (FreeListSize() > 0) {
+	if (globalState_.totalFreeListSize_ > 0) {
 		// First we check to see if we have any previously freed elements and will use them first
 		auto [block, ptr](PopFreeList());
 		new (&block) T(std::forward<Args>(args)...);// emplace onto our buffer
@@ -93,11 +93,11 @@ auto GrowingGlobalPoolAllocator<T, ms, bs>::Allocate(Args &&... args) -> PtrType
 	}
 
 	// Failing that, find the index into the next element in the vector
-	const std::uint32_t nextIndex(NumOfElements());
+	const std::uint32_t nextIndex(globalState_.numOfElements_);
 
 	if (nextIndex < ms) {
 		// We have space, so add element in vector and return that.
-		++NumOfElements();
+		++globalState_.numOfElements_;
 		new (&GetMemoryOrAlloc(nextIndex)) T(std::forward<Args>(args)...);// emplace onto our buffer
 		return PtrType{nextIndex};
 	}
@@ -123,8 +123,8 @@ auto GrowingGlobalPoolAllocator<T, ms, bs>::Free(FourBytePtr ptr, T *value) -> v
 	if (freeCount == bs) {
 		freeCount = 0;
 
-		if (FreeListSize() > numOfFreeElementsBeforeEviction) {
-			const std::size_t highestInsertedPointer(NumOfElements() - 1);
+		if (globalState_.totalFreeListSize_ > numOfFreeElementsBeforeEviction) {
+			const std::size_t highestInsertedPointer(globalState_.numOfElements_ - 1);
 			const std::size_t highestBucket(highestInsertedPointer >>
 											MostSignificantBitLocation<BUCKET_MASK>());
 			HGALLOC_ASSERT(highestBucket < NUM_OF_BUCKETS);
@@ -133,16 +133,16 @@ auto GrowingGlobalPoolAllocator<T, ms, bs>::Free(FourBytePtr ptr, T *value) -> v
 			const std::size_t highestIndexInBucket(highestInsertedPointer & BUCKET_MASK);
 			const std::size_t bucketSize(highestIndexInBucket + 1);
 
-			auto &freeList(GetGlobalState().freeLists_[highestBucket]);
+			auto &freeList(globalState_.freeLists_[highestBucket]);
 			if (freeList.freeListSize_ == bucketSize) {
 				// we can evict an entire frame
 				freeList.freeListSize_ = 0;
 				freeList.freeList_ = PtrType::NULL_PTR;
-				FreeListSize() -= bucketSize;
-				NumOfElements() -= bucketSize;
+				globalState_.totalFreeListSize_ -= bucketSize;
+				globalState_.numOfElements_ -= bucketSize;
 				// From http://www.cplusplus.com/reference/vector/vector/clear/ as a way to force
 				// reallocation
-				std::vector<MemBlock>().swap(Buffers()[highestBucket]);
+				std::vector<MemBlock>().swap(globalState_.buffers_[highestBucket]);
 			}
 		}
 	}
@@ -151,21 +151,14 @@ auto GrowingGlobalPoolAllocator<T, ms, bs>::Free(FourBytePtr ptr, T *value) -> v
 template<typename T, std::size_t ms, std::size_t bs>
 auto GrowingGlobalPoolAllocator<T, ms, bs>::Size() const -> std::size_t
 {
-	return NumOfElements() - FreeListSize();
-}
-
-template<typename T, std::size_t ms, std::size_t bs>
-auto GrowingGlobalPoolAllocator<T, ms, bs>::Buffers()
-		-> std::array<std::vector<MemBlock>, NUM_OF_BUCKETS> &
-{
-	return GetGlobalState().buffers_;
+	return globalState_.numOfElements_ - globalState_.totalFreeListSize_;
 }
 
 template<typename T, std::size_t ms, std::size_t bs>
 auto GrowingGlobalPoolAllocator<T, ms, bs>::PopFreeList() -> BlockAndPtr
 {
-	auto &freeLists(GetGlobalState().freeLists_);
-	for (std::size_t i(GetGlobalState().smallestBucket_); i < NUM_OF_BUCKETS; ++i) {
+	auto &freeLists(globalState_.freeLists_);
+	for (std::size_t i(globalState_.smallestBucket_); i < NUM_OF_BUCKETS; ++i) {
 		auto &freeList(freeLists[i]);
 		if (freeList.freeList_ != PtrType::NULL_PTR) {
 			HGALLOC_ASSERT(freeList.freeListSize_ > 0);
@@ -175,8 +168,8 @@ auto GrowingGlobalPoolAllocator<T, ms, bs>::PopFreeList() -> BlockAndPtr
 			freeList.freeList_ = *reinterpret_cast<FourBytePtr *>(&element);
 
 			--freeList.freeListSize_;
-			GetGlobalState().smallestBucket_ = i;
-			--FreeListSize();
+			globalState_.smallestBucket_ = i;
+			--globalState_.totalFreeListSize_;
 
 			return {element, nextElement};
 		}
@@ -193,33 +186,16 @@ auto GrowingGlobalPoolAllocator<T, ms, bs>::PushFreeList(FourBytePtr ptr) -> voi
 	const std::size_t bucketNum(ptr >> MostSignificantBitLocation<BUCKET_MASK>());
 	HGALLOC_ASSERT(bucketNum < NUM_OF_BUCKETS);
 
-	auto &freeList(GetGlobalState().freeLists_[bucketNum]);
+	auto &freeList(globalState_.freeLists_[bucketNum]);
 
 	*reinterpret_cast<FourBytePtr *>(&GetMemory(ptr)) = freeList.freeList_;
 	freeList.freeList_ = ptr;
 
-	++FreeListSize();
+	++globalState_.totalFreeListSize_;
 	++freeList.freeListSize_;
 
-	GetGlobalState().smallestBucket_ = std::min(GetGlobalState().smallestBucket_, bucketNum);
+	globalState_.smallestBucket_ = std::min(globalState_.smallestBucket_, bucketNum);
 }
 
-template<typename T, std::size_t ms, std::size_t bs>
-auto GrowingGlobalPoolAllocator<T, ms, bs>::FreeListSize() -> std::size_t &
-{
-	return GetGlobalState().totalFreeListSize_;
-}
-
-template<typename T, std::size_t ms, std::size_t bs>
-auto GrowingGlobalPoolAllocator<T, ms, bs>::NumOfElements() -> std::size_t &
-{
-	return GetGlobalState().numOfElements_;
-}
-
-template<typename T, std::size_t ms, std::size_t bs>
-auto GrowingGlobalPoolAllocator<T, ms, bs>::GetGlobalState() -> struct GlobalState &
-{
-	return globalState_;
-}
 
 }// namespace hgalloc
